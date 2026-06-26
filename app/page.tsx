@@ -31,6 +31,7 @@ import {
   Sparkles,
   ExternalLink,
   Download,
+  Gamepad2,
 } from "lucide-react";
 
 // --- Types ---
@@ -428,6 +429,13 @@ ${activeAlerts.length > 0 ? activeAlerts.map(alert => `  * [ALERT ${alert.id}] -
           <div className="w-10 h-10 rounded-full border border-amber-500/40 flex items-center justify-center bg-amber-500/5">
             <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#D4AF37] animate-pulse"></div>
           </div>
+          <a
+            href="/titan_track_drift.html"
+            className="flex items-center space-x-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all"
+          >
+            <Gamepad2 className="w-3.5 h-3.5" />
+            <span>3D Tyre Game</span>
+          </a>
           <button 
             onClick={() => setActiveTab("chat")} 
             className="flex items-center space-x-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all"
@@ -814,6 +822,25 @@ ${activeAlerts.length > 0 ? activeAlerts.map(alert => `  * [ALERT ${alert.id}] -
                       <p className="text-[11px] text-neutral-300 leading-relaxed">
                         Michelin&apos;s predictive Wear Algorithm flags the Rear-Left tire as approaching sub-millimeter thread limit. Automated booking is queued.
                       </p>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-amber-500/5 to-cyan-500/5 border border-amber-500/10 p-4 rounded-xl flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center space-x-2 mb-1.5">
+                          <Gamepad2 className="w-4 h-4 text-amber-500" />
+                          <h4 className="text-xs font-semibold text-amber-400">Titan Track Drift Simulator</h4>
+                        </div>
+                        <p className="text-[11px] text-neutral-300 leading-relaxed mb-3">
+                          Test your drifting reflexes under extreme tire degradation on Highway 201 in our high-fidelity virtual tire lab. Keep tread levels optimal!
+                        </p>
+                      </div>
+                      <a
+                        href="/titan_track_drift.html"
+                        className="bg-neutral-900/80 hover:bg-neutral-800 border border-amber-500/20 hover:border-amber-500/40 text-amber-400 py-2.5 px-3 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all w-full text-center"
+                      >
+                        <span>Launch 3D Game</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
                     </div>
                   </div>
 

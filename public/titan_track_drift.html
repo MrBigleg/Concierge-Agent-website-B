@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titan Track Drift - Tyre Simulator</title>
+    <!-- Google Fonts for sleek tech and sans-serif pairings -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-green: #39ff14;
+            --neon-red: #ff0055;
+            --gold: #D4AF37;
+            --dark-bg: #050505;
+            --panel-bg: rgba(10, 10, 10, 0.85);
+            --border-glow: rgba(0, 243, 255, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--dark-bg);
+            font-family: 'Space Grotesk', sans-serif;
+            color: #ffffff;
+        }
+
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* UI Overlay Layer */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-col: column;
+            justify-content: space-between;
+            padding: 24px;
+        }
+
+        .interactive-ui {
+            pointer-events: auto;
+        }
+
+        /* Top HUD */
+        #hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .hud-card {
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 3px solid var(--gold);
+            padding: 12px 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hud-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 4px;
+        }
+
+        .hud-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 24px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .hud-value.gold-text {
+            color: var(--gold);
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        /* Tread Depth Display (Center top) */
+        #tread-card {
+            align-items: center;
+            width: 320px;
+            border-top: 3px solid var(--neon-blue);
+            transition: border-color 0.3s ease;
+        }
+
+        #tread-bar-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+
+        #tread-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, var(--neon-blue), #0099ff);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+            transition: width 0.1s linear, background 0.3s ease;
+        }
+
+        /* Pulsing Red critical warning classes */
+        .tread-critical {
+            animation: pulse-red 0.5s infinite alternate;
+            border-top-color: var(--neon-red) !important;
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 5px rgba(255, 0, 85, 0.4); border-color: rgba(255, 0, 85, 0.4); }
+            100% { box-shadow: 0 0 15px rgba(255, 0, 85, 0.9); border-color: rgba(255, 0, 85, 1); }
+        }
+
+        #tread-text-percent {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--neon-blue);
+        }
+
+        /* Screen Flashes */
+        #flash-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease-out;
+        }
+
+        #flash-message {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            z-index: 11;
+            pointer-events: none;
+            text-align: center;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #flash-message.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .alert-title {
+            font-size: 32px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-shadow: 0 0 15px currentColor;
+            margin: 0 0 4px 0;
+        }
+
+        .alert-subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.2em;
+            color: rgba(255, 255, 255, 0.8);
+            text-transform: uppercase;
+        }
+
+        /* Screens: Intro, Game Over */
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 5, 0.9);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            text-align: center;
+            backdrop-filter: blur(12px);
+            transition: opacity 0.5s ease;
+        }
+
+        .hidden-screen {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .cyber-panel {
+            background: rgba(10, 10, 10, 0.7);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.05);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 520px;
+            width: 100%;
+            position: relative;
+        }
+
+        .cyber-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, var(--gold) 0%, transparent 40%, transparent 60%, var(--neon-blue) 100%);
+            z-index: -1;
+            border-radius: 18px;
+            opacity: 0.3;
+        }
+
+        h1 {
+            font-size: 44px;
+            font-weight: 800;
+            margin: 0 0 8px 0;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #ffffff 30%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
+        }
+
+        .sub-brand {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            color: var(--neon-blue);
+            margin-bottom: 30px;
+            display: block;
+        }
+
+        p.screen-desc {
+            font-size: 14px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.65);
+            margin-bottom: 30px;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* Cyber Buttons */
+        .btn-cyber {
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, var(--gold) 0%, #b89220 100%);
+            color: var(--dark-bg);
+            border: none;
+            border-radius: 8px;
+            padding: 16px 32px;
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 12px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-cyber:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.5);
+            background: linear-gradient(135deg, #ffd700 0%, var(--gold) 100%);
+        }
+
+        .btn-cyber:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-cyber-outline {
+            font-family: 'JetBrains Mono', monospace;
+            background: transparent;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 14px 32px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-cyber-outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: #ffffff;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+
+        /* High Score & Stats list */
+        .stats-grid {
+            display: grid;
+            grid-template-cols: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-item-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 4px;
+        }
+
+        .stat-item-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        /* Instructions list */
+        .instructions-box {
+            background: rgba(0, 243, 255, 0.03);
+            border: 1px solid rgba(0, 243, 255, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .instruction-line {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .instruction-line:last-child {
+            margin-bottom: 0;
+        }
+
+        .instruction-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--neon-blue);
+            margin-top: 6px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .instruction-dot.green { background: var(--neon-green); }
+        .instruction-dot.red { background: var(--neon-red); }
+
+        /* Game Notifications / active status indicator */
+        #game-messages {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast-msg {
+            background: rgba(10, 10, 10, 0.9);
+            border-left: 3px solid var(--neon-green);
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slide-in 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards;
+            backdrop-filter: blur(4px);
+        }
+
+        .toast-msg.boost { border-left-color: var(--neon-green); }
+        .toast-msg.danger { border-left-color: var(--neon-red); }
+        .toast-msg.info { border-left-color: var(--neon-blue); }
+
+        @keyframes slide-in {
+            0% { transform: translateX(-30px); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Top Bar Status Info */
+        .header-meta {
+            position: absolute;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: rgba(255, 255, 255, 0.3);
+            text-align: center;
+            z-index: 10;
+        }
+
+        /* Mobile Controls Overlay */
+        #mobile-touch-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            #mobile-touch-area {
+                display: block;
+            }
+            .cyber-panel {
+                padding: 24px;
+            }
+            h1 {
+                font-size: 32px;
+            }
+            #tread-card {
+                width: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas for 3D graphics -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Full Screen Flash Effects -->
+    <div id="flash-overlay"></div>
+
+    <!-- Alert / Splash Message Center -->
+    <div id="flash-message">
+        <h2 class="alert-title" id="alert-title-text">Telemetry Synchronised</h2>
+        <span class="alert-subtitle" id="alert-subtitle-text">Tread Restored to 100% • System Normal</span>
+    </div>
+
+    <!-- Dynamic Alert Status List -->
+    <div id="game-messages"></div>
+
+    <!-- Intro Screen / Main Menu -->
+    <div id="intro-screen" class="overlay-screen">
+        <div class="cyber-panel">
+            <h1>Titan Track Drift</h1>
+            <span class="sub-brand">Project Titan Virtual Tyre Lab</span>
+            
+            <p class="screen-desc">
+                Pilot the virtual tyre test mule. Maintain optimal tyre temperature and grip on a procedurally wear-intensive track. Avoid track debris and drive over blue Service Zones to swap tyres before your tread hits zero.
+            </p>
+
+            <div class="instructions-box">
+                <div class="instruction-line">
+                    <div class="instruction-dot"></div>
+                    <div><strong>LANE CONTROLS:</strong> Move your mouse cursor (or drag on mobile screens) left and right to drift your vehicle across 3 lanes.</div>
+                </div>
+                <div class="instruction-line">
+                    <div class="instruction-dot green"></div>
+                    <div><strong>GREEN BOOSTS:</strong> Collect telemetry streams to gain temporary speed, complete durability (no tyre wear) and score multipliers.</div>
+                </div>
+                <div class="instruction-line">
+                    <div class="instruction-dot red"></div>
+                    <div><strong>RED DEBRIS:</strong> Steer clear of oil slicks and track spikes that cause massive structural tyre damage and degrade control.</div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item" style="grid-column: span 2;">
+                    <span class="stat-item-label">Global High Score</span>
+                    <span class="stat-item-val" style="color: var(--gold);" id="menu-high-score">00000</span>
+                </div>
+            </div>
+
+            <button class="btn-cyber interactive-ui" id="btn-start">
+                Initialize Simulation
+            </button>
+            <button class="btn-cyber-outline interactive-ui" id="btn-back-to-app" onclick="window.location.href='/'">
+                Return to Concierge
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameover-screen" class="overlay-screen hidden-screen">
+        <div class="cyber-panel">
+            <h1 style="background: linear-gradient(135deg, #ff4d4d 30%, var(--neon-red) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Tyre Blowout</h1>
+            <span class="sub-brand" style="color: var(--neon-red);">Simulation Aborted • Tread Depleted</span>
+            
+            <p class="screen-desc" id="gameover-desc">
+                Your tyre tread reached 0%. Complete structural failure resulted in loss of control on Highway 201.
+            </p>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-item-label">Final Score</span>
+                    <span class="stat-item-val" style="color: #ffffff;" id="stat-final-score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-item-label">High Score</span>
+                    <span class="stat-item-val" style="color: var(--gold);" id="stat-high-score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-item-label">Tyres Replaced</span>
+                    <span class="stat-item-val" style="color: var(--neon-blue);" id="stat-swaps">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-item-label">Time Elapsed</span>
+                    <span class="stat-item-val" style="color: var(--neon-green);" id="stat-time">0s</span>
+                </div>
+            </div>
+
+            <button class="btn-cyber interactive-ui" id="btn-restart">
+                Re-initialize Simulation
+            </button>
+            <button class="btn-cyber-outline interactive-ui" id="btn-back-to-app-2" onclick="window.location.href='/'">
+                Return to Concierge
+            </button>
+        </div>
+    </div>
+
+    <!-- Core Game UI Overlay -->
+    <div id="ui-layer">
+        
+        <!-- TOP ROW STATS -->
+        <div id="hud-top">
+            <!-- Score Card -->
+            <div class="hud-card">
+                <span class="hud-label">Score</span>
+                <span class="hud-value gold-text" id="hud-score">00000</span>
+            </div>
+
+            <!-- Tread Depth Indicator -->
+            <div class="hud-card" id="tread-card">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <span class="hud-label">Tread Depth</span>
+                    <span id="tread-text-percent">100%</span>
+                </div>
+                <div id="tread-bar-container">
+                    <div id="tread-bar-fill"></div>
+                </div>
+            </div>
+
+            <!-- Speed & Level -->
+            <div class="hud-card" style="align-items: flex-end;">
+                <span class="hud-label">Telemetry Speed</span>
+                <span class="hud-value" id="hud-speed" style="font-family: 'JetBrains Mono', monospace;">120 <span style="font-size: 11px; font-weight: normal; color: rgba(255,255,255,0.4)">MPH</span></span>
+            </div>
+        </div>
+
+        <!-- Ambient status details -->
+        <div class="header-meta">
+            <span>Virtual Mule Stream • Hwy 201 Khon Kaen Simulator</span>
+        </div>
+
+        <!-- Touch overlay for mobile devices -->
+        <div id="mobile-touch-area"></div>
+    </div>
+
+    <!-- Web Audio API Synthesizer & Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // --- Web Audio Synthesizer Class ---
+        class SoundSynth {
+            constructor() {
+                this.ctx = null;
+                this.engineOsc = null;
+                this.engineGain = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (this.ctx) return;
+                try {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    this.startEngineHum();
+                } catch (e) {
+                    console.warn("Web Audio not supported", e);
+                }
+            }
+
+            startEngineHum() {
+                if (!this.ctx) return;
+                
+                // Create a low rumble engine hum
+                this.engineOsc = this.ctx.createOscillator();
+                this.engineOsc.type = 'sawtooth';
+                this.engineOsc.frequency.setValueAtTime(45, this.ctx.currentTime); // Low freq
+
+                // Lowpass filter to make it sound like a deep engine car hum
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(140, this.ctx.currentTime);
+
+                this.engineGain = this.ctx.createGain();
+                this.engineGain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+
+                this.engineOsc.connect(filter);
+                filter.connect(this.engineGain);
+                this.engineGain.connect(this.ctx.destination);
+                
+                this.engineOsc.start();
+            }
+
+            updateEnginePitch(speedRatio, wearRatio) {
+                if (!this.ctx || !this.engineOsc || this.muted) return;
+                // Pitch rises as speed increases, and gets rougher/lower-pitched if tires are worn
+                const pitch = 35 + (speedRatio * 55) + ((1 - wearRatio) * 15);
+                this.engineOsc.frequency.setTargetAtTime(pitch, this.ctx.currentTime, 0.1);
+            }
+
+            playCollectBoost() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                
+                // Classic ascending cyber chime
+                const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50]; // C,E,G,C,E,G,C arpeggio
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+                    
+                    gain.gain.setValueAtTime(0.08, now + idx * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.04 + 0.2);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    
+                    osc.start(now + idx * 0.04);
+                    osc.stop(now + idx * 0.04 + 0.25);
+                });
+            }
+
+            playTyreSwap() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                
+                // Power-up repair sound: quick sub sweep upwards + clean ping
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.3);
+                
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                osc.start();
+                osc.stop(now + 0.4);
+
+                // High-freq chime
+                const osc2 = this.ctx.createOscillator();
+                const gain2 = this.ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(880, now + 0.1);
+                gain2.gain.setValueAtTime(0.1, now + 0.1);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc2.connect(gain2);
+                gain2.connect(this.ctx.destination);
+                osc2.start(now + 0.1);
+                osc2.stop(now + 0.5);
+            }
+
+            playDebrisCrash() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                
+                // White noise explosion with a quick pitch-dropped sine sweep underneath
+                // Noise buffer
+                const bufferSize = this.ctx.sampleRate * 0.4;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(300, now);
+                filter.frequency.exponentialRampToValueAtTime(40, now + 0.35);
+                
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                noise.start();
+                noise.stop(now + 0.4);
+
+                // Low bass thump
+                const sub = this.ctx.createOscillator();
+                const subGain = this.ctx.createGain();
+                sub.type = 'sine';
+                sub.frequency.setValueAtTime(90, now);
+                sub.frequency.exponentialRampToValueAtTime(10, now + 0.25);
+                subGain.gain.setValueAtTime(0.25, now);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                sub.connect(subGain);
+                subGain.connect(this.ctx.destination);
+                sub.start();
+                sub.stop(now + 0.35);
+            }
+
+            playWarningBeep() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                
+                // High-pitched synth beep
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, now);
+                
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                osc.start();
+                osc.stop(now + 0.15);
+            }
+
+            stopEngine() {
+                if (this.engineGain) {
+                    this.engineGain.gain.setValueAtTime(0, this.ctx.currentTime);
+                }
+            }
+        }
+
+        const sound = new SoundSynth();
+
+        // --- Three.js Setup & Game Logic ---
+        const canvas = document.getElementById('game-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+
+        // Scene and Camera
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020205);
+        scene.fog = new THREE.FogExp2(0x020205, 0.012);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+        // Positioned slightly above and behind the car for a great third-person tracking view
+        camera.position.set(0, 5, 12);
+        camera.lookAt(0, 1.5, -5);
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+        scene.add(ambientLight);
+
+        // Glow spotlight pointing onto the action track
+        const dirLight = new THREE.DirectionalLight(0x00f3ff, 0.8);
+        dirLight.position.set(5, 15, 5);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        const mainGlowLight = new THREE.PointLight(0xD4AF37, 1.5, 30);
+        mainGlowLight.position.set(0, 4, -4);
+        scene.add(mainGlowLight);
+
+        // --- Game State Variables ---
+        let gameActive = false;
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('titan_track_high_score') || '0');
+        document.getElementById('menu-high-score').innerText = String(highScore).padStart(5, '0');
+
+        let distance = 0;
+        let timeElapsed = 0;
+        let elapsedSeconds = 0;
+        let level = 1;
+        let lastLevelIncreaseTime = 0;
+
+        let tyreSwaps = 0;
+        let treadDepth = 100.0; // Starts at 100%
+        let currentTargetSpeed = 22.0; // Base forward movement speed units/sec
+        let currentSpeed = 22.0;
+        let boostTimer = 0.0;
+        let targetX = 0.0; // Target lane coordinate (-4 to +4)
+        let playerX = 0.0; // Current car position X
+        let lastWarningTime = 0;
+
+        // Lane setup: 3 lanes at X = -3.5, 0, 3.5
+        const laneX = [-3.5, 0, 3.5];
+        const roadWidth = 11;
+        const trackLength = 160;
+
+        // Arrays to hold procedural 3D elements
+        let roadSegments = [];
+        let debrisObjects = [];
+        let boostObjects = [];
+        let serviceZoneObjects = [];
+        let sidePillars = [];
+        let particleGroups = [];
+
+        // --- Materials ---
+        const carMaterial = new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.1, metalness: 0.95 });
+        const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x111115, roughness: 0.4 });
+        const goldAccentMaterial = new THREE.MeshStandardMaterial({ color: 0xD4AF37, roughness: 0.2, metalness: 0.8 });
+        
+        // Emissive materials for glowing neon look
+        const neonBlueMaterial = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+        const neonGreenMaterial = new THREE.MeshBasicMaterial({ color: 0x39ff14 });
+        const neonRedMaterial = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+        const goldMaterial = new THREE.MeshBasicMaterial({ color: 0xD4AF37 });
+
+        // --- Build Player Ship/Car (virtual tyre test mule) ---
+        const playerGroup = new THREE.Group();
+
+        // Futuristic sleek chassis base
+        const bodyGeom = new THREE.BoxGeometry(1.6, 0.4, 3.2);
+        const chassis = new THREE.Mesh(bodyGeom, carMaterial);
+        chassis.position.y = 0.4;
+        chassis.castShadow = true;
+        playerGroup.add(chassis);
+
+        // Sleek windshield
+        const glassGeom = new THREE.BoxGeometry(1.2, 0.3, 1.0);
+        // Tilt/shear the windshield slightly
+        glassGeom.translate(0, 0, -0.2);
+        const glass = new THREE.Mesh(glassGeom, new THREE.MeshStandardMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.6, roughness: 0 }));
+        glass.position.set(0, 0.7, -0.2);
+        playerGroup.add(glass);
+
+        // Golden spoiler wing at the back
+        const spoilerBarGeom = new THREE.BoxGeometry(1.8, 0.08, 0.4);
+        const spoiler = new THREE.Mesh(spoilerBarGeom, goldAccentMaterial);
+        spoiler.position.set(0, 1.1, 1.4);
+        spoiler.castShadow = true;
+        playerGroup.add(spoiler);
+
+        const spoilerLeftGeom = new THREE.BoxGeometry(0.08, 0.6, 0.3);
+        const spoilerL = new THREE.Mesh(spoilerLeftGeom, carMaterial);
+        spoilerL.position.set(-0.85, 0.8, 1.4);
+        playerGroup.add(spoilerL);
+
+        const spoilerRightL = new THREE.Mesh(spoilerLeftGeom, carMaterial);
+        spoilerRightL.position.set(0.85, 0.8, 1.4);
+        playerGroup.add(spoilerRightL);
+
+        // Sleek glowing underglow stripes under the car
+        const underglowGeom = new THREE.BoxGeometry(1.4, 0.05, 2.5);
+        const underglow = new THREE.Mesh(underglowGeom, new THREE.MeshBasicMaterial({ color: 0x00f3ff }));
+        underglow.position.set(0, 0.15, 0);
+        playerGroup.add(underglow);
+
+        // 4 wheels (Virtual Tyres)
+        const wheels = [];
+        const wheelGeom = new THREE.CylinderGeometry(0.35, 0.35, 0.45, 16);
+        wheelGeom.rotateZ(Math.PI / 2); // Align cylinders sideways
+
+        const tirePositions = [
+            [-0.95, 0.35, -1.0], // Front Left
+            [0.95, 0.35, -1.0],  // Front Right
+            [-1.0, 0.35, 1.1],   // Rear Left (Wider/critical)
+            [1.0, 0.35, 1.1]     // Rear Right
+        ];
+
+        tirePositions.forEach((pos, idx) => {
+            const wheelGroup = new THREE.Group();
+            wheelGroup.position.set(pos[0], pos[1], pos[2]);
+
+            const tyreMesh = new THREE.Mesh(wheelGeom, wheelMaterial);
+            tyreMesh.castShadow = true;
+            wheelGroup.add(tyreMesh);
+
+            // Add a neon glowing rim circle inside each tire
+            const rimGeom = new THREE.RingGeometry(0.2, 0.28, 16);
+            rimGeom.rotateY(Math.PI / 2);
+            // Front tires get blue, rear get blue/red depending on wear
+            const rimColor = (idx === 2) ? 0xff0055 : 0x00f3ff; // RL has red glowing rim initially to represent telemetry warning
+            const rimMat = new THREE.MeshBasicMaterial({ color: rimColor, side: THREE.DoubleSide });
+            
+            const rimL = new THREE.Mesh(rimGeom, rimMat);
+            rimL.position.x = -0.23;
+            wheelGroup.add(rimL);
+
+            const rimR = new THREE.Mesh(rimGeom, rimMat);
+            rimR.position.x = 0.23;
+            wheelGroup.add(rimR);
+
+            playerGroup.add(wheelGroup);
+            wheels.push(wheelGroup);
+        });
+
+        // Add player to scene
+        playerGroup.position.set(0, 0, 0);
+        scene.add(playerGroup);
+
+        // --- Build Procedural Track Floor & Surrounding Pillars ---
+        function createRoadSegment(zPos) {
+            const roadGroup = new THREE.Group();
+            roadGroup.position.z = zPos;
+
+            // Main asphalt plane
+            const floorGeom = new THREE.PlaneGeometry(roadWidth, 40);
+            const floorMat = new THREE.MeshStandardMaterial({ 
+                color: 0x050508, 
+                roughness: 0.95, 
+                metalness: 0.1 
+            });
+            const floor = new THREE.Mesh(floorGeom, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            roadGroup.add(floor);
+
+            // Neon Blue lane edge indicators running along the sides
+            const edgeGeom = new THREE.BoxGeometry(0.12, 0.04, 40);
+            
+            const leftEdge = new THREE.Mesh(edgeGeom, neonBlueMaterial);
+            leftEdge.position.set(-roadWidth/2, 0.03, 0);
+            roadGroup.add(leftEdge);
+
+            const rightEdge = new THREE.Mesh(edgeGeom, neonBlueMaterial);
+            rightEdge.position.set(roadWidth/2, 0.03, 0);
+            roadGroup.add(rightEdge);
+
+            // Glowing neon dashes dividing the 3 lanes
+            const dashes = 4;
+            const dashLength = 2.5;
+            for (let i = 0; i < dashes; i++) {
+                const dashGeom = new THREE.BoxGeometry(0.06, 0.02, dashLength);
+                const dashMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.25 });
+                
+                const d1 = new THREE.Mesh(dashGeom, dashMat);
+                d1.position.set(-roadWidth/6, 0.015, -20 + (i * 10) + 5);
+                roadGroup.add(d1);
+
+                const d2 = new THREE.Mesh(dashGeom, dashMat);
+                d2.position.set(roadWidth/6, 0.015, -20 + (i * 10) + 5);
+                roadGroup.add(d2);
+            }
+
+            scene.add(roadGroup);
+            roadSegments.push(roadGroup);
+        }
+
+        // Initialize enough segments to cover depth view
+        for (let i = 0; i < 5; i++) {
+            createRoadSegment(-i * 40);
+        }
+
+        // Procedural environment pillars (Cyberpunk light beacons) alongside the track
+        function createSidePillar(zPos) {
+            const pillarGroup = new THREE.Group();
+            
+            // Left Pillar
+            const leftSide = new THREE.Group();
+            leftSide.position.set(-7, 0, zPos);
+            
+            const baseGeom = new THREE.BoxGeometry(0.6, 7.0, 0.6);
+            const baseMesh = new THREE.Mesh(baseGeom, carMaterial);
+            baseMesh.position.y = 3.5;
+            leftSide.add(baseMesh);
+
+            // Light strip on the face
+            const lightGeom = new THREE.BoxGeometry(0.08, 6.0, 0.64);
+            const lightMesh = new THREE.Mesh(lightGeom, goldMaterial);
+            lightMesh.position.set(0.31, 3.5, 0);
+            leftSide.add(lightMesh);
+            
+            pillarGroup.add(leftSide);
+
+            // Right Pillar
+            const rightSide = new THREE.Group();
+            rightSide.position.set(7, 0, zPos);
+
+            const baseMeshR = new THREE.Mesh(baseGeom, carMaterial);
+            baseMeshR.position.y = 3.5;
+            rightSide.add(baseMeshR);
+
+            const lightMeshR = new THREE.Mesh(lightGeom, goldMaterial);
+            lightMeshR.position.set(-0.31, 3.5, 0);
+            rightSide.add(lightMeshR);
+
+            pillarGroup.add(rightSide);
+
+            // Giant upper neon arch connecting left/right occasionally
+            if (Math.abs(zPos) % 32 === 0) {
+                const archGeom = new THREE.BoxGeometry(14.6, 0.3, 0.6);
+                const arch = new THREE.Mesh(archGeom, carMaterial);
+                arch.position.set(0, 7.1, zPos);
+                pillarGroup.add(arch);
+
+                const archGlowGeom = new THREE.BoxGeometry(14.0, 0.08, 0.64);
+                const archGlow = new THREE.Mesh(archGlowGeom, neonBlueMaterial);
+                archGlow.position.set(0, 6.92, zPos);
+                pillarGroup.add(archGlow);
+            }
+
+            scene.add(pillarGroup);
+            sidePillars.push(pillarGroup);
+        }
+
+        for (let z = 0; z > -200; z -= 16) {
+            createSidePillar(z);
+        }
+
+
+        // --- Obstacle & Item Spawning ---
+        // Spawns debris, boosts, and service zones on a modular lane grid
+        function spawnTrackEntities(zPos) {
+            // Pick a random lane
+            const availableLanes = [0, 1, 2];
+            const laneCount = Math.floor(Math.random() * 2) + 1; // 1 or 2 entities per grid section
+            
+            // Randomly shuffle lanes to distribute
+            availableLanes.sort(() => Math.random() - 0.5);
+
+            for (let i = 0; i < laneCount; i++) {
+                const lane = availableLanes[i];
+                const x = laneX[lane];
+                
+                const roll = Math.random() * 100;
+                
+                if (roll < 45) {
+                    // Spawn Debris (Hazard) - Red
+                    createDebrisMesh(x, zPos);
+                } else if (roll < 80) {
+                    // Spawn Telemetry Boost - Green
+                    createBoostMesh(x, zPos);
+                } else {
+                    // Spawn Service Pitstop Zone (Only if none exist in immediate range)
+                    if (serviceZoneObjects.length === 0 || serviceZoneObjects[serviceZoneObjects.length - 1].position.z > zPos + 35) {
+                        createServiceZoneMesh(x, zPos);
+                    } else {
+                        // Default back to boost
+                        createBoostMesh(x, zPos);
+                    }
+                }
+            }
+        }
+
+        // Spawns a Service zone every 50-70 units of distance
+        let nextServiceSpawnZ = -60;
+
+        function checkServiceZoneSpawning(zFront) {
+            if (zFront < nextServiceSpawnZ) {
+                const randomLane = Math.floor(Math.random() * 3);
+                createServiceZoneMesh(laneX[randomLane], zFront - 40);
+                // Queue next service zone further out
+                // Higher levels make service zones spawn slightly less frequently or trickier to get
+                const difficultyFactor = Math.min(25, level * 2.5);
+                nextServiceSpawnZ = zFront - (70 + Math.random() * 40 + difficultyFactor);
+            }
+        }
+
+        // Hazard Debris Builder
+        function createDebrisMesh(x, z) {
+            const debrisGroup = new THREE.Group();
+            debrisGroup.position.set(x, 0.1, z);
+
+            const isOilSlick = Math.random() > 0.5;
+            debrisGroup.userData = { 
+                type: 'debris', 
+                isOilSlick: isOilSlick,
+                hit: false,
+                radius: 1.1 
+            };
+
+            if (isOilSlick) {
+                // Shiny flat circular puddle
+                const puddleGeom = new THREE.CylinderGeometry(1.0, 1.0, 0.02, 16);
+                const puddleMat = new THREE.MeshStandardMaterial({ 
+                    color: 0x110202, 
+                    roughness: 0.05, 
+                    metalness: 0.8,
+                    emissive: 0x330005 
+                });
+                const puddle = new THREE.Mesh(puddleGeom, puddleMat);
+                debrisGroup.add(puddle);
+
+                // Add small red hazardous glowing indicators
+                const indicatorGeom = new THREE.BoxGeometry(0.1, 0.08, 0.1);
+                for (let k = 0; k < 4; k++) {
+                    const ind = new THREE.Mesh(indicatorGeom, neonRedMaterial);
+                    const angle = (k / 4) * Math.PI * 2;
+                    ind.position.set(Math.cos(angle) * 0.8, 0.04, Math.sin(angle) * 0.8);
+                    debrisGroup.add(ind);
+                }
+            } else {
+                // Spike strip/ nails
+                const plateGeom = new THREE.BoxGeometry(1.5, 0.06, 0.6);
+                const plate = new THREE.Mesh(plateGeom, carMaterial);
+                debrisGroup.add(plate);
+
+                // Multiple spikes
+                const spikeGeom = new THREE.ConeGeometry(0.12, 0.5, 5);
+                spikeGeom.translate(0, 0.25, 0); // offset to base
+
+                for (let s = -2; s <= 2; s++) {
+                    const spike = new THREE.Mesh(spikeGeom, neonRedMaterial);
+                    spike.position.set(s * 0.32, 0, 0);
+                    debrisGroup.add(spike);
+                }
+            }
+
+            scene.add(debrisGroup);
+            debrisObjects.push(debrisGroup);
+        }
+
+        // Green Telemetry Boost Builder
+        function createBoostMesh(x, z) {
+            const boostGroup = new THREE.Group();
+            boostGroup.position.set(x, 1.0, z);
+            boostGroup.userData = { type: 'boost', hit: false, radius: 1.0 };
+
+            // Glowing green cube representing matrix data streams
+            const innerGeom = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+            const innerMesh = new THREE.Mesh(innerGeom, neonGreenMaterial);
+            boostGroup.add(innerMesh);
+
+            // External orbital gold ring
+            const ringGeom = new THREE.TorusGeometry(0.7, 0.05, 8, 24);
+            const ringMesh = new THREE.Mesh(ringGeom, goldMaterial);
+            ringMesh.rotation.x = Math.PI / 4;
+            boostGroup.add(ringMesh);
+
+            // Light particle stem rising
+            const lineGeom = new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6);
+            const lineMesh = new THREE.Mesh(lineGeom, new THREE.MeshBasicMaterial({ color: 0x39ff14, transparent: true, opacity: 0.3 }));
+            lineMesh.position.y = -0.5;
+            boostGroup.add(lineMesh);
+
+            scene.add(boostGroup);
+            boostObjects.push(boostGroup);
+        }
+
+        // Service Zone Pad Builder (Blue portal)
+        function createServiceZoneMesh(x, z) {
+            const zoneGroup = new THREE.Group();
+            zoneGroup.position.set(x, 0.02, z);
+            zoneGroup.userData = { type: 'service', hit: false, radius: 1.8 };
+
+            // Large glowing neon blue ring on the road
+            const ringGeom = new THREE.RingGeometry(1.4, 1.6, 32);
+            ringGeom.rotateX(-Math.PI / 2);
+            const padMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, side: THREE.DoubleSide });
+            const pad = new THREE.Mesh(ringGeom, padMat);
+            zoneGroup.add(pad);
+
+            // Glowing inner circular mesh
+            const innerRing = new THREE.RingGeometry(0, 1.39, 16);
+            innerRing.rotateX(-Math.PI / 2);
+            const innerMat = new THREE.MeshBasicMaterial({ 
+                color: 0x00bcff, 
+                transparent: true, 
+                opacity: 0.15,
+                side: THREE.DoubleSide 
+            });
+            const innerPad = new THREE.Mesh(innerRing, innerMat);
+            zoneGroup.add(innerPad);
+
+            // Outer portal light frame arches (2 glowing side arches over the pad)
+            const archGeom = new THREE.TorusGeometry(1.6, 0.08, 8, 30, Math.PI);
+            const archL = new THREE.Mesh(archGeom, neonBlueMaterial);
+            archL.position.set(0, 0, 0);
+            archL.rotation.y = Math.PI / 2; // Face forward
+            zoneGroup.add(archL);
+
+            scene.add(zoneGroup);
+            serviceZoneObjects.push(zoneGroup);
+        }
+
+        // --- Custom Particle Engine for drift/collision sparks ---
+        function createSparkExplosion(position, colorHex) {
+            const particleCount = 15;
+            const geom = new THREE.BufferGeometry();
+            const positions = [];
+            const velocities = [];
+
+            for (let i = 0; i < particleCount; i++) {
+                positions.push(position.x, position.y + 0.3, position.z);
+                
+                // Explode in spherical direction
+                const vx = (Math.random() - 0.5) * 8;
+                const vy = (Math.random() * 5) + 2;
+                const vz = (Math.random() - 0.5) * 8;
+                velocities.push(vx, vy, vz);
+            }
+
+            geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            const mat = new THREE.PointsMaterial({
+                color: colorHex,
+                size: 0.18,
+                transparent: true,
+                opacity: 1.0,
+                blending: THREE.AdditiveBlending
+            });
+
+            const pSystem = new THREE.Points(geom, mat);
+            scene.add(pSystem);
+
+            particleGroups.push({
+                system: pSystem,
+                velocities: velocities,
+                life: 1.0, // fades out over 1s
+                creationTime: clock.getElapsedTime()
+            });
+        }
+
+        const clock = new THREE.Clock();
+
+        // Populate initial objects
+        for (let d = -40; d > -200; d -= 35) {
+            spawnTrackEntities(d);
+        }
+
+
+        // --- Inputs / Controls ---
+        // Mouse Coordinates mapped: window left to right -> lane -5.5 to +5.5
+        function onMouseMove(event) {
+            if (!gameActive) return;
+            const mouseX = (event.clientX / window.innerWidth) * 2 - 1; // -1 to 1
+            // Smoothly map X boundaries
+            targetX = mouseX * (roadWidth / 2 - 0.9);
+        }
+
+        // Mobile touch events support
+        const touchArea = document.getElementById('mobile-touch-area');
+        touchArea.addEventListener('touchmove', (e) => {
+            if (!gameActive) return;
+            if (e.touches.length > 0) {
+                const touchX = (e.touches[0].clientX / window.innerWidth) * 2 - 1;
+                targetX = touchX * (roadWidth / 2 - 0.9);
+            }
+        });
+
+        window.addEventListener('mousemove', onMouseMove);
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+
+        // --- UI Event Handlers ---
+        document.getElementById('btn-start').addEventListener('click', () => {
+            sound.init(); // Initialize synthesizers on first click
+            document.getElementById('intro-screen').classList.add('hidden-screen');
+            resetGame();
+            gameActive = true;
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            sound.init();
+            document.getElementById('gameover-screen').classList.add('hidden-screen');
+            resetGame();
+            gameActive = true;
+        });
+
+        // Toast Logger helper
+        function addToastMessage(text, type = 'info') {
+            const container = document.getElementById('game-messages');
+            const toast = document.createElement('div');
+            toast.className = `toast-msg ${type}`;
+            
+            let iconText = "⚙️";
+            if (type === 'boost') iconText = "⚡";
+            if (type === 'danger') iconText = "⚠️";
+            if (type === 'info') iconText = "🛜";
+
+            toast.innerHTML = `<span>${iconText}</span><span>${text}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Trigger procedural full-screen notifications
+        function triggerScreenFlash(title, subtitle, isPositive = true) {
+            const overlay = document.getElementById('flash-overlay');
+            const textGroup = document.getElementById('flash-message');
+            const titleElem = document.getElementById('alert-title-text');
+            const subElem = document.getElementById('alert-subtitle-text');
+
+            titleElem.innerText = title;
+            subElem.innerText = subtitle;
+            
+            if (isPositive) {
+                overlay.style.backgroundColor = 'rgba(0, 243, 255, 0.15)';
+                titleElem.style.color = 'var(--neon-blue)';
+            } else {
+                overlay.style.backgroundColor = 'rgba(255, 0, 85, 0.25)';
+                titleElem.style.color = 'var(--neon-red)';
+            }
+
+            overlay.style.opacity = '1';
+            textGroup.classList.add('active');
+
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                textGroup.classList.remove('active');
+            }, 1200);
+        }
+
+        function resetGame() {
+            score = 0;
+            distance = 0;
+            timeElapsed = 0;
+            elapsedSeconds = 0;
+            level = 1;
+            tyreSwaps = 0;
+            treadDepth = 100.0;
+            currentTargetSpeed = 22.0;
+            currentSpeed = 22.0;
+            boostTimer = 0.0;
+            playerX = 0;
+            targetX = 0;
+            lastWarningTime = 0;
+            
+            playerGroup.position.set(0, 0, 0);
+
+            // Reset UI states
+            document.getElementById('hud-score').innerText = '00000';
+            updateTreadBar(100);
+            
+            // Clean active spawns
+            debrisObjects.forEach(obj => scene.remove(obj));
+            boostObjects.forEach(obj => scene.remove(obj));
+            serviceZoneObjects.forEach(obj => scene.remove(obj));
+            particleGroups.forEach(obj => scene.remove(obj.system));
+            
+            debrisObjects = [];
+            boostObjects = [];
+            serviceZoneObjects = [];
+            particleGroups = [];
+
+            // Spawn initial safe set
+            for (let d = -45; d > -180; d -= 35) {
+                spawnTrackEntities(d);
+            }
+
+            nextServiceSpawnZ = -70;
+            lastLevelIncreaseTime = clock.getElapsedTime();
+            
+            // Reset left rear rim color back to red alerting
+            wheels[2].children[1].material.color.setHex(0xff0055);
+            wheels[2].children[2].material.color.setHex(0xff0055);
+
+            addToastMessage("Titan telemetry sync initiated.", "info");
+        }
+
+
+        // --- Core Render Game Loop ---
+        function update(deltaTime) {
+            if (!gameActive) return;
+
+            // Increment elapsed distances
+            timeElapsed += deltaTime;
+            const newSeconds = Math.floor(timeElapsed);
+            if (newSeconds > elapsedSeconds) {
+                elapsedSeconds = newSeconds;
+                // Survivors score: +10 pts per second survived
+                score += 10;
+                document.getElementById('hud-score').innerText = String(score).padStart(5, '0');
+            }
+
+            // Procedural speed and difficulty curves (every 20s)
+            if (timeElapsed - lastLevelIncreaseTime > 20.0) {
+                level++;
+                lastLevelIncreaseTime = timeElapsed;
+                currentTargetSpeed += 5.0; // Increase speed
+                addToastMessage(`Speed Increments • System Level ${level} Active`, "info");
+                triggerScreenFlash(`Track Level Up`, `Speed standard elevated to ${Math.floor(currentTargetSpeed * 5)} MPH`, true);
+            }
+
+            // Handle temporary telemetry boost decay
+            if (boostTimer > 0) {
+                boostTimer -= deltaTime;
+                currentSpeed = currentTargetSpeed * 1.35; // 35% speed buff
+                if (boostTimer <= 0) {
+                    addToastMessage("Telemetry stream boost expired.", "info");
+                    currentSpeed = currentTargetSpeed;
+                }
+            } else {
+                // If tires are fully worn, limit max speed to simulated limp-mode
+                if (treadDepth < 30.0) {
+                    currentSpeed = THREE.MathUtils.lerp(currentSpeed, currentTargetSpeed * 0.7, 0.1);
+                } else {
+                    currentSpeed = THREE.MathUtils.lerp(currentSpeed, currentTargetSpeed, 0.1);
+                }
+            }
+
+            // Update HUD text
+            const mph = Math.floor(currentSpeed * 5.4);
+            document.getElementById('hud-speed').innerHTML = `${mph} <span style="font-size: 11px; font-weight: normal; color: rgba(255,255,255,0.4)">MPH</span>`;
+
+            distance += currentSpeed * deltaTime;
+
+            // Tire physics slider: lower tread makes controls slip/drift heavily
+            // Normal lerp speed is 0.14. Under critical wear, it decreases to 0.035
+            let controlSlideFactor = 0.14;
+            if (treadDepth < 30.0) {
+                // Grip drops dramatically
+                const gripRatio = Math.max(0.2, treadDepth / 30.0); // ranges 0.2 to 1.0
+                controlSlideFactor = 0.035 + (gripRatio * 0.05);
+            }
+
+            // Apply smooth drift movement to the vehicle mesh
+            playerX = THREE.MathUtils.lerp(playerX, targetX, controlSlideFactor);
+            playerGroup.position.x = playerX;
+
+            // Visual body roll banking when steering
+            const steeringDiff = targetX - playerX;
+            playerGroup.rotation.z = -steeringDiff * 0.08;
+            playerGroup.rotation.y = steeringDiff * 0.04;
+
+            // Spin tyres relative to speed
+            wheels.forEach(wheel => {
+                wheel.children[0].rotation.x -= currentSpeed * deltaTime * 0.8;
+            });
+
+            // Tyre degradation calculations (Wear Drain over time)
+            if (boostTimer <= 0) {
+                // Wear rate bases on velocity + lateral sliding stress
+                let wearFactor = 2.4; // Base 2.4% per second
+                const turningStress = Math.abs(steeringDiff) * 3.5;
+                wearFactor += (currentSpeed / 20.0) * 0.5; // faster speed = more heat friction
+                wearFactor += turningStress; // cornering slippage drains rubber
+
+                treadDepth = Math.max(0, treadDepth - (wearFactor * deltaTime));
+                updateTreadBar(treadDepth);
+
+                // Check Critical Tread Warnings (<30%)
+                if (treadDepth < 30.0 && treadDepth > 0) {
+                    if (clock.getElapsedTime() - lastWarningTime > 0.8) {
+                        sound.playWarningBeep();
+                        lastWarningTime = clock.getElapsedTime();
+                        // Flash warning indicator on console
+                        if (Math.floor(clock.getElapsedTime() * 2) % 2 === 0) {
+                            addToastMessage("CRITICAL TYRE WEAR ALERT - REDUCE SPEED!", "danger");
+                        }
+                    }
+                }
+
+                if (treadDepth <= 0) {
+                    gameOver();
+                }
+            } else {
+                // Boost active = 100% tire durability (no wear)
+                updateTreadBar(treadDepth);
+            }
+
+            // Sound Synth Pitch Control
+            const speedRatio = currentSpeed / 40.0;
+            const wearRatio = treadDepth / 100.0;
+            sound.updateEnginePitch(speedRatio, wearRatio);
+
+            // Infinite Floor & Pillar repeating (shift camera coordinates or move objects backward)
+            roadSegments.forEach(segment => {
+                segment.position.z += currentSpeed * deltaTime;
+                if (segment.position.z > 40) {
+                    // Recycle segment to back of queue
+                    segment.position.z -= 200;
+                }
+            });
+
+            sidePillars.forEach(pillar => {
+                pillar.position.z += currentSpeed * deltaTime;
+                if (pillar.position.z > 20) {
+                    pillar.position.z -= 220;
+                }
+            });
+
+            // Update procedurally spawned obstacle entities
+            // Hazards (Debris)
+            for (let i = debrisObjects.length - 1; i >= 0; i--) {
+                const debris = debrisObjects[i];
+                debris.position.z += currentSpeed * deltaTime;
+
+                // Collision detection with player car
+                const distanceZ = Math.abs(debris.position.z - playerGroup.position.z);
+                const distanceX = Math.abs(debris.position.x - playerGroup.position.x);
+
+                if (distanceZ < 1.4 && distanceX < debris.userData.radius && !debris.userData.hit) {
+                    debris.userData.hit = true;
+                    // Penalty! Lose tyre tread instantly
+                    treadDepth = Math.max(0, treadDepth - 18.0);
+                    sound.playDebrisCrash();
+                    createSparkExplosion(debris.position, 0xff0055);
+                    
+                    triggerScreenFlash("Hazard Debris Impacted!", "Rear-Left casing damaged • -18% Tread loss", false);
+                    addToastMessage("DEBRIS HIT: Tread depth degraded!", "danger");
+
+                    // Hide mesh visually
+                    debris.visible = false;
+                }
+
+                // Recycle/cleanup far boundary
+                if (debris.position.z > 20) {
+                    scene.remove(debris);
+                    debrisObjects.splice(i, 1);
+                }
+            }
+
+            // Collectibles (Telemetry streams)
+            for (let i = boostObjects.length - 1; i >= 0; i--) {
+                const b = boostObjects[i];
+                b.position.z += currentSpeed * deltaTime;
+                
+                // Spin/float visual animation
+                b.rotation.y += deltaTime * 2.0;
+
+                const distanceZ = Math.abs(b.position.z - playerGroup.position.z);
+                const distanceX = Math.abs(b.position.x - playerGroup.position.x);
+
+                if (distanceZ < 1.4 && distanceX < b.userData.radius && !b.userData.hit) {
+                    b.userData.hit = true;
+                    sound.playCollectBoost();
+                    createSparkExplosion(b.position, 0x39ff14);
+                    
+                    score += 150;
+                    boostTimer = 5.0; // 5 seconds speed boost
+                    triggerScreenFlash("Telemetry Boost Active", "Friction Shield Engaged • Tread lock enabled", true);
+                    addToastMessage("TELEMETRY BOOST: Standard tread wear paused!", "boost");
+
+                    b.visible = false;
+                }
+
+                if (b.position.z > 20) {
+                    scene.remove(b);
+                    boostObjects.splice(i, 1);
+                }
+            }
+
+            // Repair/Service zones
+            for (let i = serviceZoneObjects.length - 1; i >= 0; i--) {
+                const pad = serviceZoneObjects[i];
+                pad.position.z += currentSpeed * deltaTime;
+
+                const distanceZ = Math.abs(pad.position.z - playerGroup.position.z);
+                const distanceX = Math.abs(pad.position.x - playerGroup.position.x);
+
+                if (distanceZ < 1.6 && distanceX < pad.userData.radius && !pad.userData.hit) {
+                    pad.userData.hit = true;
+                    tyreSwaps++;
+                    treadDepth = 100.0; // Full fresh compound swap
+                    sound.playTyreSwap();
+                    createSparkExplosion(pad.position, 0x00f3ff);
+                    
+                    score += 400; // Bonus score
+                    triggerScreenFlash("Telemetry Synchronised", "New Tyre Compound Swapped • Core standard balanced", true);
+                    addToastMessage("SERVICE COMPLETED: fresh 100% compound mounted", "boost");
+
+                    // Make rear rim glows fully nominal green/blue for safety synchronization look
+                    wheels[2].children[1].material.color.setHex(0x00f3ff);
+                    wheels[2].children[2].material.color.setHex(0x00f3ff);
+                    
+                    pad.visible = false;
+                }
+
+                if (pad.position.z > 20) {
+                    scene.remove(pad);
+                    serviceZoneObjects.splice(i, 1);
+                }
+            }
+
+            // Spawn replacement obstacles way out ahead
+            // We want to continuously keep track entities spawned in the distance
+            const furthestZ = getFurthestEntityZ();
+            if (furthestZ > -160) {
+                spawnTrackEntities(furthestZ - 35);
+            }
+
+            // Update procedural particles
+            for (let i = particleGroups.length - 1; i >= 0; i--) {
+                const group = particleGroups[i];
+                group.life -= deltaTime;
+                
+                const posAttr = group.system.geometry.getAttribute('position');
+                const v = group.velocities;
+
+                for (let k = 0; k < posAttr.count; k++) {
+                    const x = posAttr.getX(k) + v[k * 3] * deltaTime;
+                    // Gravity pull
+                    v[k * 3 + 1] -= 9.8 * deltaTime;
+                    const y = posAttr.getY(k) + v[k * 3 + 1] * deltaTime;
+                    const z = posAttr.getZ(k) + v[k * 3 + 2] * deltaTime;
+                    posAttr.setXYZ(k, x, y, z);
+                }
+                posAttr.needsUpdate = true;
+                group.system.material.opacity = group.life;
+
+                if (group.life <= 0) {
+                    scene.remove(group.system);
+                    particleGroups.splice(i, 1);
+                }
+            }
+
+            // Check if service zones need general placement rules
+            checkServiceZoneSpawning(getFurthestEntityZ());
+        }
+
+        // Helper to find the furthest generated obstacle
+        function getFurthestEntityZ() {
+            let furthest = 0;
+            debrisObjects.forEach(obj => { if (obj.position.z < furthest) furthest = obj.position.z; });
+            boostObjects.forEach(obj => { if (obj.position.z < furthest) furthest = obj.position.z; });
+            serviceZoneObjects.forEach(obj => { if (obj.position.z < furthest) furthest = obj.position.z; });
+            return furthest;
+        }
+
+        function updateTreadBar(tread) {
+            const fill = document.getElementById('tread-bar-fill');
+            const pct = document.getElementById('tread-text-percent');
+            const card = document.getElementById('tread-card');
+
+            const treadPct = Math.ceil(tread);
+            fill.style.width = `${treadPct}%`;
+            pct.innerText = `${treadPct}%`;
+
+            if (treadPct > 60) {
+                fill.style.background = 'linear-gradient(90deg, #00f3ff, #0088ff)';
+                fill.style.boxShadow = '0 0 10px rgba(0, 243, 255, 0.5)';
+                pct.style.color = 'var(--neon-blue)';
+                card.classList.remove('tread-critical');
+            } else if (treadPct > 30) {
+                fill.style.background = 'linear-gradient(90deg, #ffd700, #ff8800)';
+                fill.style.boxShadow = '0 0 10px rgba(255, 136, 0, 0.5)';
+                pct.style.color = '#ffaa00';
+                card.classList.remove('tread-critical');
+            } else {
+                fill.style.background = 'linear-gradient(90deg, #ff0055, #ff0000)';
+                fill.style.boxShadow = '0 0 12px rgba(255, 0, 85, 0.7)';
+                pct.style.color = 'var(--neon-red)';
+                card.classList.add('tread-critical');
+            }
+        }
+
+        function gameOver() {
+            gameActive = false;
+            sound.stopEngine();
+
+            // Save high score
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('titan_track_high_score', highScore);
+            }
+
+            // Fill Game Over overlay stats
+            document.getElementById('stat-final-score').innerText = String(score).padStart(5, '0');
+            document.getElementById('stat-high-score').innerText = String(highScore).padStart(5, '0');
+            document.getElementById('stat-swaps').innerText = tyreSwaps;
+            document.getElementById('stat-time').innerText = `${Math.floor(timeElapsed)}s`;
+
+            document.getElementById('gameover-screen').classList.remove('hidden-screen');
+        }
+
+
+        // --- Three.js Animate Frame Request ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            
+            // Render limit delta to avoid warp speed physics during frame stutters
+            const cappedDelta = Math.min(delta, 0.1);
+            update(cappedDelta);
+
+            // Spin ambient grid shader/material details slightly or make other subtle visuals
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
