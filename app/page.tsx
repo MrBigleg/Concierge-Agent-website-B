@@ -170,18 +170,22 @@ export default function TitanConcierge() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Trigger simulated AP2 Payment
   const triggerAP2Payment = async () => {
     setCheckoutStatus("authorizing");
     
     try {
       const storefrontUrl = process.env.NEXT_PUBLIC_STOREFRONT_AGENT_URL || "http://localhost:3000";
       
+      const transactionId = typeof window !== 'undefined' && window.crypto?.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+      const timestamp = Date.now();
+      
       const payload = {
         item: "Michelin Pilot Sport Cup 2",
         quantity: 1,
         maxPrice: 250000,
-        total: 205000
+        total: 205000,
+        transactionId,
+        timestamp
       };
       
       const signRes = await fetch("/api/ap2-sign", {
@@ -206,7 +210,9 @@ export default function TitanConcierge() {
             item: "Michelin Pilot Sport Cup 2",
             quantity: 1,
             maxPrice: 250000,
-            paymentNote: jws
+            paymentNote: jws,
+            transactionId,
+            timestamp
           },
           id: Date.now()
         })

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Payload must be a JSON object" }, { status: 400 });
   }
 
-  const requiredFields = ["item", "quantity", "total", "maxPrice"];
+  const requiredFields = ["item", "quantity", "total", "maxPrice", "transactionId", "timestamp"];
   const missingFields = requiredFields.filter(field => payload[field] === undefined);
   if (missingFields.length > 0) {
     return NextResponse.json(
