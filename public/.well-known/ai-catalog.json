@@ -1,0 +1,17 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "Project Titan Concierge Hub",
+    "id": "did:web:project-titan.com:concierge"
+  },
+  "entries": [
+    {
+      "id": "concierge-agent-001",
+      "name": "Titan Concierge Agent",
+      "trustManifest": {
+        "workloadIdentity": "did:web:project-titan.com:agents:concierge",
+        "compliance": ["https://project-titan.com/compliance/pdpa"]
+      }
+    }
+  ]
+}
