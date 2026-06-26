@@ -61,9 +61,17 @@ Powered server-side by `gemini-3.5-flash` with direct Google Maps Grounding enab
     ```
 4.  Open [http://localhost:3000](http://localhost:3000) to view the application in your browser.
 
-## 🔐 SPIFFE Workload Identity & AP2 Payment Protocol
-Transactions are secured via asymmetric signature cryptography to prevent invoice tampering.
-- **Workload Identity SPIFFE ID:** `spiffe://project-titan.com/ns/default/sa/concierge-agent`
-- **Transaction Signing Key:** Asymmetric RSA-256 Private Key (`private_key.pem`)
-- **Decoupled Security Anchors:** Exposed via `.well-known/ai-catalog.json` static discovery catalog.
+## 🔐 Security Hardening & AP2 Payments Protection
+- **Asymmetric Transaction Signing**: Generates JWS detached signatures (`header..signature`) using RSA-2048 keys. Payload parameters are canonicalized by sorting keys alphabetically before hashing.
+- **Transaction Identification**: Inject unique `transactionId` (UUID) and `timestamp` values to prevent signature eavesdropping and replay attacks.
+- **Validation Suite**: Evaluated via `test-security.js` verifying proper signing structures and prevention of double-spending or replay attacks.
+
+## 👤 Data & User Privacy Architecture
+- **Telemetry Privacy**: Car sensor telemetry remains local to the dashboard client, only package dimensions and order metrics are transmitted during A2A negotiation.
+- **Credential Safety**: SPIFFE workload identities (`spiffe://project-titan.com/...`) are mapped to static catalog manifests to ensure zero credential disclosure during federated discovery.
+
+## 📊 Evals and Testing Framework (Kaggle Capstone)
+This project is evaluated against:
+1. **Deterministic Evals**: Validating payment signature validity and rejection of replayed/expired notes.
+2. **Agent / LLM Evals**: Measuring the Concierge's accuracy in recommending Michelin replacements based on real telemetry anomalies.
 
