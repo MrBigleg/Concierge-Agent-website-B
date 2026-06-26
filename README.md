@@ -60,3 +60,10 @@ Powered server-side by `gemini-3.5-flash` with direct Google Maps Grounding enab
     npm run dev
     ```
 4.  Open [http://localhost:3000](http://localhost:3000) to view the application in your browser.
+
+## 🔐 SPIFFE Workload Identity & AP2 Payment Protocol
+Transactions are secured via asymmetric signature cryptography to prevent invoice tampering.
+- **Workload Identity SPIFFE ID:** `spiffe://project-titan.com/ns/default/sa/concierge-agent`
+- **Transaction Signing Key:** Asymmetric RSA-256 Private Key (`private_key.pem`)
+- **Decoupled Security Anchors:** Exposed via `.well-known/ai-catalog.json` static discovery catalog.
+
