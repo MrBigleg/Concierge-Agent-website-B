@@ -1,0 +1,6 @@
+{
+  "name": "Titan Concierge",
+  "description": "Autonomous concierge agent managing predictive maintenance and tire replacement logistics for a Lamborghini in Isan, Thailand.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

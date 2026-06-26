@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-serif), Cormorant Garamond, Georgia, serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+
+  /* Overriding default neutrals to match Sophisticated Dark */
+  --color-neutral-950: #050505;
+  --color-neutral-900: #0A0A0A;
+  --color-neutral-800: #141414;
+  --color-neutral-700: #202020;
+  --color-neutral-600: #303030;
+  --color-neutral-500: #505050;
+  --color-neutral-400: #888888;
+  --color-neutral-300: #B0B0B0;
+  --color-neutral-200: #D0D0D0;
+  --color-neutral-100: #F5F2ED;
+
+  /* Adding Gold Palette */
+  --color-gold-50: #FCF9F2;
+  --color-gold-100: #FAF4E3;
+  --color-gold-200: #F2E3BC;
+  --color-gold-300: #EAD090;
+  --color-gold-400: #E5C158;
+  --color-gold-500: #D4AF37;
+  --color-gold-600: #B79124;
+  --color-gold-700: #93731B;
+  --color-gold-800: #6D5414;
+  --color-gold-900: #4B390D;
+  --color-gold-950: #2C2106;
+
+  /* Overriding amber to alias to gold for automatic transition */
+  --color-amber-50: #FCF9F2;
+  --color-amber-100: #FAF4E3;
+  --color-amber-200: #F2E3BC;
+  --color-amber-300: #EAD090;
+  --color-amber-400: #E5C158;
+  --color-amber-500: #D4AF37;
+  --color-amber-600: #B79124;
+  --color-amber-700: #93731B;
+  --color-amber-800: #6D5414;
+  --color-amber-900: #4B390D;
+  --color-amber-950: #2C2106;
+
+  /* Custom Red */
+  --color-red-500: #FF4444;
+  --color-red-600: #DD2222;
+}
+
+body {
+  background-color: #050505;
+  color: #F5F2ED;
+}
+
+
