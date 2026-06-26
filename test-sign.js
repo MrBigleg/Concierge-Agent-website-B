@@ -1,14 +1,28 @@
 const crypto = require('crypto');
 const fs = require('fs');
 
+function canonicalizeJson(obj) {
+  if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
+    return JSON.stringify(obj);
+  }
+  const sortedObj = {};
+  Object.keys(obj).sort().forEach(key => {
+    sortedObj[key] = obj[key];
+  });
+  return JSON.stringify(sortedObj);
+}
+
 try {
   const privateKey = fs.readFileSync('private_key.pem', 'utf8');
   const publicKey = fs.readFileSync('public_key.pem', 'utf8');
 
-  const payload = { item: 'Michelin', quantity: 1 };
+  const payload = { item: 'Michelin', quantity: 1, total: 100, maxPrice: 150 };
   const header = { alg: 'RS256', typ: 'JWS' };
   const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
-  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  
+  // Use canonical JSON payload
+  const canonicalPayload = canonicalizeJson(payload);
+  const encodedPayload = Buffer.from(canonicalPayload).toString('base64url');
 
   const sign = crypto.createSign('RSA-SHA256');
   sign.update(`${encodedHeader}.${encodedPayload}`);
@@ -39,3 +53,4 @@ try {
   console.error('Test execution error:', error);
   process.exit(1);
 }
+
