@@ -430,6 +430,9 @@ ${activeAlerts.length > 0 ? activeAlerts.map(alert => `  * [ALERT ${alert.id}] -
       });
       if (!rpcResponse.ok) throw new Error("JSON-RPC request failed");
       const negotiationResult = await rpcResponse.json();
+      if (negotiationResult.error || negotiationResult.result?.status === 'rejected') {
+        throw new Error(negotiationResult.error?.message || negotiationResult.result?.reason || "Negotiation rejected");
+      }
       await new Promise(resolve => setTimeout(resolve, 800));
 
       setA2aLogs((prev) => [
