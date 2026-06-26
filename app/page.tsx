@@ -108,6 +108,35 @@ export default function TitanConcierge() {
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Handle URL action parameters (e.g. from the 3D tyre drift game)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const action = params.get("action");
+      if (action === "replace-rear-left") {
+        setTimeout(() => {
+          setActiveTab("chat");
+          setMessages([
+            {
+              role: "model",
+              content: "Welcome, Craig. I am your Titan Concierge Agent. I am monitoring your Aventador SVJ. Telemetry indicates a rear-left thermal anomaly (115°C, 22 PSI) near Hwy 201, Khon Kaen. Slick Mobile Dispatch is ready to deploy. How can I assist you with your logistics or route planning today?",
+            },
+            {
+              role: "user",
+              content: "My Rear-Left tyre just blew out in the virtual test mule simulation! I need an immediate replacement booked.",
+            },
+            {
+              role: "model",
+              content: "Acknowledged, Craig. I have received the telemetry dump from your virtual test mule run. The Rear-Left tyre (Michelin Pilot Sport) suffered a critical wear blowout (0% tread). I have pre-selected the Rear-Left tire inside the Booking desk for you and set the service type to Michelin SmartWear replacement. Please tap the Booking tab above or say 'Proceed with Booking' to finalize scheduling.",
+            }
+          ]);
+          setSelectedTire("RL");
+          setBookingStep(1);
+        }, 100);
+      }
+    }
+  }, []);
+
   // Telemetry real-time simulator interval
   useEffect(() => {
     const interval = setInterval(() => {

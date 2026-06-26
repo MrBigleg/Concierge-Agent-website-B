@@ -19,7 +19,12 @@ This app is styled strictly under the **Sophisticated Dark** visual aesthetic:
 ### 1. Telemetry Ingestion (MCP)
 Tracks real-time Michelin SmartWear tyre sensors predicting tread wear to the millimeter. Automatically flags critical wear thresholds (e.g. 82% worn, 115°C temperature spike, and 22 PSI pressure drop on the Rear-Left tire).
 
-### 2. User Interface (A2UI & MCP Apps)
+### 2. Titan Track Drift (3D Tyre Game & Demo Link)
+Located at `/titan_track_drift.html`, this is an immersive Three.js HTML5 drifting game where you pilot the virtual tyre test mule. 
+* **Demo Mode (Default):** Runs a quick 20-second immersive simulation. Once the 20 seconds elapse or the tyres wear out, it triggers a catastrophic **Rear-Left Tyre Blowout** to simulate real-world telemetry wear. It then gracefully redirects the driver to the Concierge Agent with populated telemetry logs to assist with an immediate replacement booking.
+* **⚡ Full Game Easter Egg:** Add `?full=true` to the game's URL (i.e. `/titan_track_drift.html?full=true`) to enable the **Full Simulation Mode**. In this mode, tyre wear occurs at a normal rate and you can drive through the glowing blue **Service Pit Stop Zones** to replace your tyres, surviving indefinitely to compete for a high score!
+
+### 3. User Interface (A2UI & MCP Apps)
 Serves as the elegant host container for the 3D tyre selector. When the user interacts with the wireframe model, the wrapper detects state changes, highlighting detailed structural parameters (Tread thickness, Pressure, and Thermal conditions) on the fly.
 
 ### 3. Agent-to-Agent Negotiation (A2A)

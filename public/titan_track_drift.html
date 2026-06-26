@@ -528,6 +528,10 @@
                 </div>
             </div>
 
+            <div id="easter-egg-tag" style="display: none; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--neon-green); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.15em; border: 1px solid rgba(57, 255, 20, 0.2); padding: 8px; border-radius: 4px; background: rgba(57, 255, 20, 0.05); text-align: center;">
+                ⚡ Easter Egg Active: Full Simulation Mode ⚡
+            </div>
+
             <button class="btn-cyber interactive-ui" id="btn-start">
                 Initialize Simulation
             </button>
@@ -831,6 +835,16 @@
         scene.add(mainGlowLight);
 
         // --- Game State Variables ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const isFullGame = urlParams.get('full') === 'true';
+        if (isFullGame) {
+            // Un-hide the easter egg notice if present
+            setTimeout(() => {
+                const tag = document.getElementById('easter-egg-tag');
+                if (tag) tag.style.display = 'block';
+            }, 100);
+        }
+
         let gameActive = false;
         let score = 0;
         let highScore = parseInt(localStorage.getItem('titan_track_high_score') || '0');
@@ -1317,6 +1331,10 @@
         });
 
         document.getElementById('btn-restart').addEventListener('click', () => {
+            if (!isFullGame) {
+                window.location.href = '/?action=replace-rear-left';
+                return;
+            }
             sound.init();
             document.getElementById('gameover-screen').classList.add('hidden-screen');
             resetGame();
@@ -1491,12 +1509,18 @@
             // Tyre degradation calculations (Wear Drain over time)
             if (boostTimer <= 0) {
                 // Wear rate bases on velocity + lateral sliding stress
-                let wearFactor = 2.4; // Base 2.4% per second
+                let wearFactor = isFullGame ? 2.4 : 5.0; // Base 5.0% per second for 20-second demo
                 const turningStress = Math.abs(steeringDiff) * 3.5;
                 wearFactor += (currentSpeed / 20.0) * 0.5; // faster speed = more heat friction
                 wearFactor += turningStress; // cornering slippage drains rubber
 
                 treadDepth = Math.max(0, treadDepth - (wearFactor * deltaTime));
+
+                // If in demo mode, guarantee it drops to 0 by 20 seconds
+                if (!isFullGame && timeElapsed >= 20.0) {
+                    treadDepth = 0;
+                }
+
                 updateTreadBar(treadDepth);
 
                 // Check Critical Tread Warnings (<30%)
@@ -1720,6 +1744,23 @@
             document.getElementById('stat-high-score').innerText = String(highScore).padStart(5, '0');
             document.getElementById('stat-swaps').innerText = tyreSwaps;
             document.getElementById('stat-time').innerText = `${Math.floor(timeElapsed)}s`;
+
+            // Customize Game Over screen based on demo vs full game
+            const desc = document.getElementById('gameover-desc');
+            const restartBtn = document.getElementById('btn-restart');
+            const backBtn2 = document.getElementById('btn-back-to-app-2');
+
+            if (!isFullGame) {
+                desc.innerHTML = `<strong>CRITICAL FAILURE:</strong> Complete structural failure detected on the <strong>Rear-Left Tyre</strong>.<br/><br/>Michelin's predictive Wear Algorithm confirms the Rear-Left tire has degraded past the safety threshold (0% tread depth). Transitioning you back to the Concierge Agent to arrange immediate roadside support and a fresh tyre replacement.`;
+                restartBtn.innerText = "Consult Concierge (Replace Tyre)";
+                backBtn2.innerText = "Back to Concierge Dashboard";
+                backBtn2.setAttribute('onclick', "window.location.href='/?action=replace-rear-left'");
+            } else {
+                desc.innerHTML = `Your tyre tread reached 0%. Complete structural failure resulted in loss of control on Highway 201.`;
+                restartBtn.innerText = "Re-initialize Simulation";
+                backBtn2.innerText = "Return to Concierge";
+                backBtn2.setAttribute('onclick', "window.location.href='/'");
+            }
 
             document.getElementById('gameover-screen').classList.remove('hidden-screen');
         }
