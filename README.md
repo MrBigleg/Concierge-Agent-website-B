@@ -6,7 +6,7 @@ This app serves as the host **A2UI** framework, integrating real-time telemetry 
 
 ---
 
-## 🎨 Sophisticated Dark Visual Theme
+## 🎨 Sophisticated Dark Visual Theme (created with google stitch)
 This app is styled strictly under the **Sophisticated Dark** visual aesthetic:
 *   **Color Palette:** Deep obsidian `#050505` background, muted `#0A0A0A` header panels, high-contrast gold `#D4AF37` highlights, and crisp `#F5F2ED` typography.
 *   **Typography:** Elegant *Cormorant Garamond* paired with high-readability *Inter* for interfaces and *JetBrains Mono* for telemetry logs and code output.
@@ -70,7 +70,7 @@ Powered server-side by `gemini-3.5-flash` with direct Google Maps Grounding enab
 - **Telemetry Privacy**: Car sensor telemetry remains local to the dashboard client, only package dimensions and order metrics are transmitted during A2A negotiation.
 - **Credential Safety**: SPIFFE workload identities (`spiffe://project-titan.com/...`) are mapped to static catalog manifests to ensure zero credential disclosure during federated discovery.
 
-## 📊 Evals and Testing Framework (Kaggle Capstone)
+## 📊 Evals and Testing Framework
 This project is evaluated against:
 1. **Deterministic Evals**: Validating payment signature validity and rejection of replayed/expired notes.
 2. **Agent / LLM Evals**: Measuring the Concierge's accuracy in recommending Michelin replacements based on real telemetry anomalies.
