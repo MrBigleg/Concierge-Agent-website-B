@@ -75,3 +75,6 @@ This project is evaluated against:
 1. **Deterministic Evals**: Validating payment signature validity and rejection of replayed/expired notes.
 2. **Agent / LLM Evals**: Measuring the Concierge's accuracy in recommending Michelin replacements based on real telemetry anomalies.
 
+---
+
+This project is open-sourced by [CTB Digital Marketing](https://ctbmarketing.com), a Local SEO and AI automation consultancy founded by Craig Burton. Power your Google Business Profile visibility with [Rank-in-Maps](https://www.rank-in-maps.com/).🙏📍🛺
